@@ -9,7 +9,7 @@ import utils.data_utils
 import utils.train_utils
 import datetime
 
-args = utils.data_utils.get_args()
+args = utils.train_utils.get_args()
 
 # training params
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -37,7 +37,7 @@ train_iter = iter(train_loader)
 
 # create models on device
 model = BiWaveGAN(
-    latent_dim=args.latent_dim, model_size=args.model_size, phaseshuffle_rad=args.phaseshuffle_rad,
+    slice_len=args.slice_len, latent_dim=args.latent_dim, model_size=args.model_size, phaseshuffle_rad=args.phaseshuffle_rad,
     discrim_filters=args.discrim_filters, z_discrim_depth=args.z_discrim_depth,
     joint_discrim_depth=args.joint_discrim_depth, device=device
 )
@@ -51,18 +51,18 @@ optimD = optim.Adam(model.D.parameters(), lr=args.learning_rate, betas=(BETA_1, 
 fixed_noise = torch.Tensor(16, args.latent_dim).uniform_(-1, 1).to(device)
 now = datetime.datetime.now().strftime("%Y-%m-%d--%H:%M:%S")
 logdir = os.path.join(args.logdir, now)
-writer = SummaryWriter(logdir)
+writer = SummaryWriter(args.logdir)
 EG_losses = []
 D_losses = []
 recon_loss_list = []
 
 # Save args to file
-with open(os.path.join(logdir, 'args.txt'), 'w') as f:
+with open(os.path.join(args.logdir, 'args.txt'), 'w') as f:
     f.write('\n'.join([str(arg) + ': ' + str(value) for arg, value in sorted(vars(args).items(), key=lambda x: x[0])]))
 
 model.train()
 
-print(f"Training started at {now}, logdir: {logdir}")
+print(f"Training started at {now}, logdir: {args.logdir}")
 
 # make all models trainable
 for it in range(args.num_iters):
@@ -186,9 +186,9 @@ for it in range(args.num_iters):
             "D losses": D_losses,
             "val recon losses": recon_loss_list
         }
-        torch.save(chkpt, os.path.join(logdir, f"it{it}.ckpt"))
+        torch.save(chkpt, os.path.join(args.logdir, f"it{it}.ckpt"))
         if it != ITERS_PER_CHECKPOINT:
-            os.remove(os.path.join(logdir, f"it{it - ITERS_PER_CHECKPOINT}.ckpt"))
+            os.remove(os.path.join(args.logdir, f"it{it - ITERS_PER_CHECKPOINT}.ckpt"))
         writer.add_text("model checkpoint", f"checkpoint saved after iter {it}", global_step=it)
 
 # save final model checkpoint.
@@ -209,4 +209,4 @@ chkpt = {
     "D losses": D_losses,
     "val recon losses": recon_loss_list
 }
-torch.save(chkpt, os.path.join(logdir, f"final_it{it}.ckpt"))
+torch.save(chkpt, os.path.join(args.logdir, f"final_it{it}.ckpt"))
