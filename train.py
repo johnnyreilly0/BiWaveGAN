@@ -91,7 +91,7 @@ for it in range(args.n_iters):
         # compute D loss and update
         D_real = model.D(real, z_real).reshape(-1)
         D_fake = model.D(fake, z_fake).reshape(-1)
-        gp = model.D.grad_penalty(real, z_real, fake, z_fake, device=device)
+        gp = model.D.gradient_penalty(real, z_real, fake, z_fake, device=device)
         loss_D = -1 * (torch.mean(D_real) - torch.mean(D_fake)) + args.lambda_gp * gp
         loss_D.backward(retain_graph=True)
         optimD.step()
