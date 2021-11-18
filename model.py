@@ -303,11 +303,11 @@ class BiWaveGAN:
         self.slice_len = slice_len
         self.latent_dim = latent_dim
         self.model_size = model_size
-        self.G = Generator(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size)
-        self.E = Encoder(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size)
+        self.G = Generator(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size).to(device)
+        self.E = Encoder(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size).to(device)
         self.D = Discriminator(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size,
                                discrim_filters=discrim_filters, z_discrim_depth=z_discrim_depth,
-                               joint_discrim_depth=joint_discrim_depth, phaseshuffle_rad=phaseshuffle_rad)
+                               joint_discrim_depth=joint_discrim_depth, phaseshuffle_rad=phaseshuffle_rad).to(device)
 
     def generate(self, z):
         return self.G(z)
