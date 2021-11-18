@@ -59,7 +59,7 @@ class Generator(nn.Module):
     def __init__(self,
                  slice_len=32768,
                  latent_dim=100,
-                 model_size=64):
+                 model_size=32):
         super(Generator, self).__init__()
         assert slice_len in [16384, 32768, 65536]
         self.slice_len = slice_len
@@ -124,7 +124,7 @@ class Encoder(nn.Module):
     def __init__(self,
                  slice_len=37268,
                  latent_dim=100,
-                 model_size=64):
+                 model_size=32):
         assert slice_len in [16384, 32768, 65536]
         super(Encoder, self).__init__()
         self.slice_len = slice_len
@@ -180,7 +180,7 @@ class Discriminator(nn.Module):
     def __init__(self,
                  slice_len=32768,
                  latent_dim=100,
-                 model_size=64,  # TODO: change to 32?
+                 model_size=32,
                  discrim_filters=512,
                  z_discrim_depth=4,
                  joint_discrim_depth=3,
@@ -264,9 +264,33 @@ class Discriminator(nn.Module):
         output = self.joint_discrim(concat).reshape(-1)
         return output
 
+    def gradient_penalty(self, real, z_hat, fake, z, device):
+        batch_size, channels, audio_len = real.shape
+        latent_dim = z.shape[1]
+        eps = torch.rand((batch_size, 1, 1)).repeat(1, channels, audio_len).to(device)
+        interpolated_data = real * eps + fake * (1 - eps)
+        eps = torch.rand((batch_size, 1)).repeat(1, latent_dim).to(device)
+        interpolated_z = z_hat * eps + z * (1 - eps)
 
-# TODO: how to make this a nn.Module?
-class BiWaveGAN(nn.Module):
+        mixed_scores = self(interpolated_data, interpolated_z)
+
+        gradients = torch.autograd.grad(
+            outputs=mixed_scores,
+            inputs=(interpolated_data, interpolated_z),
+            grad_outputs=torch.ones_like(mixed_scores),
+            create_graph=True,
+            retain_graph=True
+        )
+        grad_x = gradients[0].view(gradients[0].shape[0], -1)
+        grad_z = gradients[1].view(gradients[1].shape[0], -1)
+        grad_cat = torch.cat((grad_x, grad_z), dim=1)
+        grad_norm = grad_cat.norm(2, dim=1)
+        grad_penalty = torch.mean((grad_norm - 1) ** 2)
+
+        return grad_penalty
+
+
+class BiWaveGAN:
     def __init__(self,
                  slice_len,
                  num_channels,
@@ -277,16 +301,29 @@ class BiWaveGAN(nn.Module):
                  joint_discrim_depth,
                  phaseshuffle_rad,
                  device):
-        pass
+        self.slice_len = slice_len
+        # ...
+        self.G = Generator() #...
+        self.E = Encoder()
+        self.D = Discriminator()
 
     def generate(self, z):
-        pass
+        return self.G(z)
 
     def encode(self, x):
-        pass
+        return self.E(x)
+
+    def discriminate(self, x, z):
+        return self.D(x, z)
 
     def reconstruct(self, x):
         pass
+
+    def train(self):
+        for submodel in [self.G, self.E, self.D]:
+            submodel.train()
+            for p in submodel.parameters():
+                p.requires_grad = True
 
     def eval(self):
         pass
