@@ -154,18 +154,6 @@ for it in range(args.num_iters):
 
     if it % ITERS_PER_VALIDATE == 0:
         pass
-        # TODO: better validation metrics ?
-        # validate and log results to tensorboard
-        # model.eval()
-        # with torch.no_grad():
-        #     recon_loss = 0
-        #     for val_batch in val_loader:
-        #         recon_batch = model.reconstruct(val_batch.to(device)).to('cpu')
-        #         recon_loss += eval_utils.reconstruction_loss(val_batch, recon_batch, reduction='sum')
-        #     recon_loss /= len(val_dataset)
-        #     recon_loss_list.append(recon_loss)
-        # writer.add_scalar("validation/reconstruction error", recon_loss, global_step=it)
-        # model.train()
 
     if it % ITERS_PER_CHECKPOINT == 0 and it > 0:
         # save model checkpoint, delete previous if necessary

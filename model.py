@@ -293,7 +293,6 @@ class Discriminator(nn.Module):
 class BiWaveGAN:
     def __init__(self,
                  slice_len,
-                 num_channels,
                  latent_dim,
                  model_size,
                  discrim_filters,
@@ -302,10 +301,13 @@ class BiWaveGAN:
                  phaseshuffle_rad,
                  device):
         self.slice_len = slice_len
-        # ...
-        self.G = Generator() #...
-        self.E = Encoder()
-        self.D = Discriminator()
+        self.latent_dim = latent_dim
+        self.model_size = model_size
+        self.G = Generator(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size)
+        self.E = Encoder(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size)
+        self.D = Discriminator(slice_len=slice_len, latent_dim=latent_dim, model_size=model_size,
+                               discrim_filters=discrim_filters, z_discrim_depth=z_discrim_depth,
+                               joint_discrim_depth=joint_discrim_depth, phaseshuffle_rad=phaseshuffle_rad)
 
     def generate(self, z):
         return self.G(z)
@@ -317,13 +319,12 @@ class BiWaveGAN:
         return self.D(x, z)
 
     def reconstruct(self, x):
-        pass
+        return self.G(self.E(x))
 
     def train(self):
         for submodel in [self.G, self.E, self.D]:
             submodel.train()
-            for p in submodel.parameters():
-                p.requires_grad = True
 
     def eval(self):
-        pass
+        for submodel in [self.G, self.E, self.D]:
+            submodel.eval()
