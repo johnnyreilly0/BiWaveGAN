@@ -65,7 +65,7 @@ model.train()
 print(f"Training started at {now}, logdir: {args.logdir}")
 
 # make all models trainable
-for it in range(args.num_iters):
+for it in range(args.n_iters):
     for p in model.D.parameters():
         p.requires_grad = True
     for p in model.G.parameters():
