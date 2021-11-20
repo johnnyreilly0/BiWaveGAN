@@ -45,14 +45,14 @@ def test_encoder_output_shape(slice_len=32768, latent_dim=100, model_size=64, ba
 
 def print_discriminator_shapes(slice_len=32768, latent_dim=100, model_size=64, batch_size=1):
     D = model.Discriminator(slice_len=slice_len, latent_dim=100, model_size=64)
-    x = torch.zeros(1, 1, slice_len)
+    x = torch.zeros(batch_size, 1, slice_len)
     print(f"x shape: {x.shape}")
     for f in D.x_discrim:
         x = f(x)
         print(f"{type(f).__name__}: {x.shape}")
 
-    z = torch.zeros(1, 1, latent_dim)
-    z = z.reshape(1, latent_dim, 1)
+    z = torch.zeros(batch_size, 1, latent_dim)
+    z = z.reshape(batch_size, latent_dim, 1)
     print(f"z shape: {z.shape}")
     for f in D.z_discrim:
         z = f(z)
@@ -66,7 +66,7 @@ def print_discriminator_shapes(slice_len=32768, latent_dim=100, model_size=64, b
 
 def test_discriminator_output_shape(slice_len=32768,
                                     latent_dim=100,
-                                    model_size=64,
+                                    model_size=32,
                                     discrim_filters=512,
                                     z_discrim_depth=4,
                                     joint_discrim_depth=3,

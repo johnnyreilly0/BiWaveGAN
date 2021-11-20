@@ -49,20 +49,20 @@ optimD = optim.Adam(model.D.parameters(), lr=args.learning_rate, betas=(BETA_1, 
 
 # for plotting and logging
 fixed_noise = torch.Tensor(16, args.latent_dim).uniform_(-1, 1).to(device)
-now = datetime.datetime.now().strftime("%Y-%m-%d--%H:%M:%S")
+now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 logdir = os.path.join(args.logdir, now)
-writer = SummaryWriter(args.logdir)
+writer = SummaryWriter(logdir)
 EG_losses = []
 D_losses = []
 recon_loss_list = []
 
 # Save args to file
-with open(os.path.join(args.logdir, 'args.txt'), 'w') as f:
+with open(os.path.join(logdir, 'args.txt'), 'w') as f:
     f.write('\n'.join([str(arg) + ': ' + str(value) for arg, value in sorted(vars(args).items(), key=lambda x: x[0])]))
 
 model.train()
 
-print(f"Training started at {now}, logdir: {args.logdir}")
+print(f"Training started at {now}, logdir: {logdir}")
 
 # make all models trainable
 for it in range(args.n_iters):
@@ -80,17 +80,20 @@ for it in range(args.n_iters):
     for _ in range(args.d_iters):
         model.D.zero_grad()
         # grab next batch
-        real = utils.train_utils.get_next_batch(train_iter, train_loader, device)
+        real, train_iter = utils.train_utils.get_next_batch(train_iter, train_loader, device)
         cur_batch_size = real.shape[0]
 
         # generate real and fake latent vectors
         z_real = model.E(real)
-        z_fake = torch.Tensor(cur_batch_size, args.latent_dim).uniform_(-1, 1).to(device)
+        z_fake = torch.Tensor(cur_batch_size, 1, args.latent_dim).uniform_(-1, 1).to(device)
         fake = model.G(z_fake)
 
         # compute D loss and update
         D_real = model.D(real, z_real).reshape(-1)
         D_fake = model.D(fake, z_fake).reshape(-1)
+        print("D inputs during training:")
+        print(f"real, z_real: {real.shape, z_real.shape}")
+        print(f"fake, z_fake: {fake.shape, z_fake.shape}")
         gp = model.D.gradient_penalty(real, z_real, fake, z_fake, device=device)
         loss_D = -1 * (torch.mean(D_real) - torch.mean(D_fake)) + args.lambda_gp * gp
         loss_D.backward(retain_graph=True)
@@ -108,7 +111,7 @@ for it in range(args.n_iters):
     model.E.zero_grad()
     model.G.zero_grad()
     # grab next batch
-    real = utils.train_utils.get_next_batch(train_iter, train_loader, device)
+    real, train_iter = utils.train_utils.get_next_batch(train_iter, train_loader, device)
     cur_batch_size = real.shape[0]
 
     # generate real and fake latent vectors
@@ -174,9 +177,9 @@ for it in range(args.n_iters):
             "D losses": D_losses,
             "val recon losses": recon_loss_list
         }
-        torch.save(chkpt, os.path.join(args.logdir, f"it{it}.ckpt"))
+        torch.save(chkpt, os.path.join(logdir, f"it{it}.ckpt"))
         if it != ITERS_PER_CHECKPOINT:
-            os.remove(os.path.join(args.logdir, f"it{it - ITERS_PER_CHECKPOINT}.ckpt"))
+            os.remove(os.path.join(logdir, f"it{it - ITERS_PER_CHECKPOINT}.ckpt"))
         writer.add_text("model checkpoint", f"checkpoint saved after iter {it}", global_step=it)
 
 # save final model checkpoint.
@@ -197,4 +200,4 @@ chkpt = {
     "D losses": D_losses,
     "val recon losses": recon_loss_list
 }
-torch.save(chkpt, os.path.join(args.logdir, f"final_it{it}.ckpt"))
+torch.save(chkpt, os.path.join(logdir, f"final_it{it}.ckpt"))

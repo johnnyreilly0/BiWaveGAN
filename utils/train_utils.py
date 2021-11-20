@@ -25,10 +25,10 @@ def get_args():
     return parser.parse_args()
 
 
-def get_next_batch(iter, loader, device):
+def get_next_batch(train_iter, loader, device):
     try:
-        batch = next(iter).to(device)
+        batch = next(train_iter).to(device)
     except StopIteration:
-        iter = iter(loader)
-        batch = next(iter).to(device)
-    return batch
+        train_iter = iter(loader)
+        batch = next(train_iter).to(device)
+    return batch, train_iter
