@@ -66,6 +66,7 @@ print(f"Training started at {now}, logdir: {logdir}")
 
 # make all models trainable
 for it in range(args.n_iters):
+    print(f"iteration {it} begin")
     for p in model.D.parameters():
         p.requires_grad = True
     for p in model.G.parameters():
@@ -140,7 +141,7 @@ for it in range(args.n_iters):
         with torch.no_grad():
             recon = model.reconstruct(real).to('cpu')
             real = real.to('cpu')
-            fake = model.generator(fixed_noise).to('cpu').detach()
+            fake = model.G(fixed_noise).to('cpu').detach()
             real_specs = spectrogram(real)
             recon_specs = spectrogram(recon)
             fake_specs = spectrogram(fake)
