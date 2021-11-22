@@ -1,5 +1,6 @@
 import os
 import torch
+import torch.nn.functional as F
 import torch.optim as optim
 import torchaudio
 from torch.utils.data import DataLoader
@@ -16,9 +17,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 BETA_1, BETA_2 = 0.5, 0.9  # TODO: put in args
 
 # logging and plotting params
-ITERS_PER_LOG = 200  # number of batches per log update
-ITERS_PER_VALIDATE = 200
-ITERS_PER_CHECKPOINT = 1000
+# TODO: put these in parser args, set default vals to something better
+ITERS_PER_VALIDATE = 50 # 200
+ITERS_PER_CHECKPOINT = 100 # 1000
 N_FFT = 512
 HOP_LENGTH = 64
 spectrogram = torchaudio.transforms.Spectrogram(n_fft=N_FFT, hop_length=HOP_LENGTH)
@@ -37,8 +38,8 @@ train_iter = iter(train_loader)
 
 # create models on device
 model = BiWaveGAN(
-    slice_len=args.slice_len, latent_dim=args.latent_dim, model_size=args.model_size, phaseshuffle_rad=args.phaseshuffle_rad,
-    discrim_filters=args.discrim_filters, z_discrim_depth=args.z_discrim_depth,
+    slice_len=args.slice_len, latent_dim=args.latent_dim, model_size=args.model_size,
+    phaseshuffle_rad=args.phaseshuffle_rad, discrim_filters=args.discrim_filters, z_discrim_depth=args.z_discrim_depth,
     joint_discrim_depth=args.joint_discrim_depth, device=device
 )
 
@@ -54,7 +55,7 @@ logdir = os.path.join(args.logdir, now)
 writer = SummaryWriter(logdir)
 EG_losses = []
 D_losses = []
-recon_loss_list = []
+recon_error_list = []
 
 # Save args to file
 with open(os.path.join(logdir, 'args.txt'), 'w') as f:
@@ -136,7 +137,7 @@ for it in range(args.n_iters):
     writer.add_scalar("loss/EG", loss_EG, global_step=it)
     writer.add_scalar("loss/D", loss_D, global_step=it)
 
-    if it % ITERS_PER_LOG == 0:
+    if it % ITERS_PER_VALIDATE == 0 & it > 0:
         # update tensorboard log
         with torch.no_grad():
             recon = model.reconstruct(real).to('cpu')
@@ -145,21 +146,26 @@ for it in range(args.n_iters):
             real_specs = spectrogram(real)
             recon_specs = spectrogram(recon)
             fake_specs = spectrogram(fake)
-            writer.add_images("Train/real spectrograms", real_specs[:16], global_step=it)
-            writer.add_images("Train/reconstructed spectrograms", recon_specs[:16], global_step=it)
-            writer.add_images("Train/fake spectrograms", fake_specs[:16], global_step=it)
-            writer.add_audio("Train/real audio", real[:16].flatten(), global_step=it, sample_rate=args.sample_rate)
-            writer.add_audio("Train/reconstructed audio", recon[:16].flatten(), global_step=it,
+            writer.add_images("Train/real spectrograms", real_specs, global_step=it)
+            writer.add_images("Train/reconstructed spectrograms", recon_specs, global_step=it)
+            writer.add_images("Train/fake spectrograms", fake_specs, global_step=it)
+            writer.add_audio("Train/real audio", real.flatten(), global_step=it, sample_rate=args.sample_rate)
+            writer.add_audio("Train/reconstructed audio", recon.flatten(), global_step=it,
                              sample_rate=args.sample_rate)
-            writer.add_audio("Train/fake audio", fake[:16].flatten(), global_step=it, sample_rate=args.sample_rate)
+            writer.add_audio("Train/fake audio", fake.flatten(), global_step=it, sample_rate=args.sample_rate)
 
-    if it % ITERS_PER_VALIDATE == 0:
-        pass
+            # calculate MSE reconstruction error on val set
+            recon_error = 0
+            for x in val_loader:
+                recon_x = model.reconstruct(x.to(device)).to('cpu')
+                recon_error += F.mse_loss(x, recon_x, reduction='sum')
+            recon_error /= len(val_dataset)
+            recon_error_list.append(recon_error)
+        model.train()
+
 
     if it % ITERS_PER_CHECKPOINT == 0 and it > 0:
-        # save model checkpoint, delete previous if necessary
         chkpt = {
-            "iter": it,
             "latent dim": args.latent_dim,
             "model size": args.model_size,
             "phaseshuffle rad": args.phaseshuffle_rad,
@@ -171,9 +177,10 @@ for it in range(args.n_iters):
             "D state_dict": model.D.state_dict(),
             "EG optimiser": optimEG.state_dict(),
             "D optimiser": optimD.state_dict(),
+            "iter": it,
             "EG losses": EG_losses,
             "D losses": D_losses,
-            "val recon losses": recon_loss_list
+            "val recon losses": recon_error_list
         }
         torch.save(chkpt, os.path.join(logdir, f"it{it}.ckpt"))
         if it != ITERS_PER_CHECKPOINT:
@@ -196,6 +203,6 @@ chkpt = {
     "D optimiser": optimD.state_dict(),
     "EG losses": EG_losses,
     "D losses": D_losses,
-    "val recon losses": recon_loss_list
+    "val recon losses": recon_error_list
 }
 torch.save(chkpt, os.path.join(logdir, f"final_it{it}.ckpt"))
