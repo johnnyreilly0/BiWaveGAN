@@ -91,9 +91,6 @@ for it in range(args.n_iters):
         # compute D loss and update
         D_real = model.D(real, z_real).reshape(-1)
         D_fake = model.D(fake, z_fake).reshape(-1)
-        print("D inputs during training:")
-        print(f"real, z_real: {real.shape, z_real.shape}")
-        print(f"fake, z_fake: {fake.shape, z_fake.shape}")
         gp = model.D.gradient_penalty(real, z_real, fake, z_fake, device=device)
         loss_D = -1 * (torch.mean(D_real) - torch.mean(D_fake)) + args.lambda_gp * gp
         loss_D.backward(retain_graph=True)
@@ -131,7 +128,7 @@ for it in range(args.n_iters):
 
     # log losses to tensorboard
     writer.add_text(
-        "Progress", f"Batch {it}/{args.num_iters}" +
+        "Progress", f"Batch {it}/{args.n_iters}" +
                     f"EG loss: {loss_EG:.4f}, D loss: {loss_D:.4f}",
         global_step=it
     )

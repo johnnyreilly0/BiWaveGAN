@@ -260,8 +260,6 @@ class Discriminator(nn.Module):
         x = self.x_discrim(x)
         z = z.reshape(-1, self.latent_dim, 1)
         z = self.z_discrim(z)
-        print(f"x: {x.shape}")
-        print(f"z_: {z.shape}")
         concat = torch.cat((x, z), dim=1)
         output = self.joint_discrim(concat).reshape(-1)
         return output
@@ -272,9 +270,7 @@ class Discriminator(nn.Module):
         eps = torch.rand((batch_size, 1, 1)).repeat(1, channels, audio_len).to(device)
         interpolated_data = real * eps + fake * (1 - eps)
         eps = torch.rand((batch_size, 1, 1)).repeat(1, 1, latent_dim).to(device)
-        print(f"eps (z): {eps.shape}")
         interpolated_z = z_hat * eps + z * (1 - eps)
-        print(f"interpolated z: {interpolated_z.shape}")
         mixed_scores = self(interpolated_data, interpolated_z)
 
         gradients = torch.autograd.grad(
