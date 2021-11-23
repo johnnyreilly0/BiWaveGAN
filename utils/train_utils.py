@@ -1,6 +1,4 @@
-import torch
 import argparse
-from torch.utils.data import DataLoader
 
 
 def get_args():

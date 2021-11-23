@@ -18,8 +18,8 @@ BETA_1, BETA_2 = 0.5, 0.9  # TODO: put in args
 
 # logging and plotting params
 # TODO: put these in parser args, set default vals to something better
-ITERS_PER_VALIDATE = 5 # 200
-ITERS_PER_CHECKPOINT = 100 # 1000
+ITERS_PER_VALIDATE = 500
+ITERS_PER_CHECKPOINT = 5000
 N_FFT = 512
 HOP_LENGTH = 64
 spectrogram = torchaudio.transforms.Spectrogram(n_fft=N_FFT, hop_length=HOP_LENGTH)
@@ -64,6 +64,9 @@ with open(os.path.join(logdir, 'args.txt'), 'w') as f:
 model.train()
 
 print(f"Training started at {now}, logdir: {logdir}")
+print(f"Training set size: {len(train_dataset)}")
+print(f"Validation set size: {len(val_dataset)}")
+print(f"log directory: {logdir}")
 
 # make all models trainable
 for it in range(args.n_iters):
@@ -160,13 +163,13 @@ for it in range(args.n_iters):
                 recon_error += F.mse_loss(x, recon_x, reduction='sum')
             recon_error /= len(val_dataset)
             recon_error_list.append(recon_error)
-        writer.add_scalar("Validation/reconstruction error", recon_loss, global_step=it)
+        writer.add_scalar("Validation/reconstruction error", recon_error, global_step=it)
         model.train()
 
 
     if it % ITERS_PER_CHECKPOINT == 0 and it > 0:
-        chkpt = {
-            "slice len": args.slice_len
+        state = {
+            "slice len": args.slice_len,
             "latent dim": args.latent_dim,
             "model size": args.model_size,
             "phaseshuffle rad": args.phaseshuffle_rad,
@@ -181,16 +184,16 @@ for it in range(args.n_iters):
             "iter": it,
             "EG losses": EG_losses,
             "D losses": D_losses,
-            "val recon losses": recon_error_list
+            "val recon errors": recon_error_list
         }
-        torch.save(chkpt, os.path.join(logdir, f"it{it}.ckpt"))
+        torch.save(state, os.path.join(logdir, f"it{it}.ckpt"))
         if it != ITERS_PER_CHECKPOINT:
             os.remove(os.path.join(logdir, f"it{it - ITERS_PER_CHECKPOINT}.ckpt"))
         writer.add_text("model checkpoint", f"checkpoint saved after iter {it}", global_step=it)
 
-# save final model checkpoint.
-chkpt = {
-            "slice len": args.slice_len
+# save final model state.
+state = {
+            "slice len": args.slice_len,
             "latent dim": args.latent_dim,
             "model size": args.model_size,
             "phaseshuffle rad": args.phaseshuffle_rad,
@@ -205,6 +208,6 @@ chkpt = {
             "iter": it,
             "EG losses": EG_losses,
             "D losses": D_losses,
-            "val recon losses": recon_error_list
+            "val recon errors": recon_error_list
         }
-torch.save(chkpt, os.path.join(logdir, f"final_it{it}.ckpt"))
+torch.save(state, os.path.join(logdir, f"final_it{it}.ckpt"))
