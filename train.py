@@ -28,12 +28,13 @@ torch.manual_seed(args.seed)
 
 # split into train and validation sets
 train_dataset = utils.data_utils.WAVDataset(args.datadir, sample_rate=args.sample_rate, slice_len=args.slice_len)
-val_size = int(args.val_split * len(train_dataset))
-train_dataset, val_dataset = torch.utils.data.random_split(train_dataset,
-                                                           [len(train_dataset) - val_size, val_size],
-                                                           torch.Generator().manual_seed(args.seed))
+if args.val_size:
+    train_dataset, val_dataset = torch.utils.data.random_split(train_dataset,
+                                                               [len(train_dataset) - args.val_size, args.val_size],
+                                                               torch.Generator().manual_seed(args.seed))
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+if args.val_size:
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 train_iter = iter(train_loader)
 
 # create models on device
@@ -81,7 +82,7 @@ for it in range(args.n_iters):
     neg_one = one * -1
 
     # D iterations
-    for _ in range(args.d_iters):
+    for _ in range(1, args.d_iters + 1):
         model.D.zero_grad()
         # grab next batch
         real, train_iter = utils.train_utils.get_next_batch(train_iter, train_loader, device)
@@ -139,7 +140,7 @@ for it in range(args.n_iters):
     writer.add_scalar("loss/EG", loss_EG, global_step=it)
     writer.add_scalar("loss/D", loss_D, global_step=it)
 
-    if it % ITERS_PER_VALIDATE == 0:
+    if args.val_size and it % ITERS_PER_VALIDATE == 0:
         # update tensorboard log
         with torch.no_grad():
             recon = model.reconstruct(real).to('cpu')
@@ -165,7 +166,6 @@ for it in range(args.n_iters):
             recon_error_list.append(recon_error)
         writer.add_scalar("Validation/reconstruction error", recon_error, global_step=it)
         model.train()
-
 
     if it % ITERS_PER_CHECKPOINT == 0 and it > 0:
         state = {

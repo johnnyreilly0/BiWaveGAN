@@ -19,7 +19,7 @@ def get_args():
     parser.add_argument('--phaseshuffle_rad', default=2, type=int)
     parser.add_argument('--sample_rate', default=250000, type=int)
     parser.add_argument('--seed', default=0, type=int)
-    parser.add_argument('--val_split', default=0.15, type=int)
+    parser.add_argument('--val_size', default=1000, type=int) # TODO: change default to 0
     return parser.parse_args()
 
 
