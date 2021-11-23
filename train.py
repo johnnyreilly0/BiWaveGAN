@@ -18,7 +18,7 @@ BETA_1, BETA_2 = 0.5, 0.9  # TODO: put in args
 
 # logging and plotting params
 # TODO: put these in parser args, set default vals to something better
-ITERS_PER_VALIDATE = 50 # 200
+ITERS_PER_VALIDATE = 5 # 200
 ITERS_PER_CHECKPOINT = 100 # 1000
 N_FFT = 512
 HOP_LENGTH = 64
@@ -67,7 +67,6 @@ print(f"Training started at {now}, logdir: {logdir}")
 
 # make all models trainable
 for it in range(args.n_iters):
-    print(f"iteration {it} begin")
     for p in model.D.parameters():
         p.requires_grad = True
     for p in model.G.parameters():
@@ -137,7 +136,7 @@ for it in range(args.n_iters):
     writer.add_scalar("loss/EG", loss_EG, global_step=it)
     writer.add_scalar("loss/D", loss_D, global_step=it)
 
-    if it % ITERS_PER_VALIDATE == 0 & it > 0:
+    if it % ITERS_PER_VALIDATE == 0:
         # update tensorboard log
         with torch.no_grad():
             recon = model.reconstruct(real).to('cpu')
@@ -161,11 +160,13 @@ for it in range(args.n_iters):
                 recon_error += F.mse_loss(x, recon_x, reduction='sum')
             recon_error /= len(val_dataset)
             recon_error_list.append(recon_error)
+        writer.add_scalar("Validation/reconstruction error", recon_loss, global_step=it)
         model.train()
 
 
     if it % ITERS_PER_CHECKPOINT == 0 and it > 0:
         chkpt = {
+            "slice len": args.slice_len
             "latent dim": args.latent_dim,
             "model size": args.model_size,
             "phaseshuffle rad": args.phaseshuffle_rad,
@@ -189,20 +190,21 @@ for it in range(args.n_iters):
 
 # save final model checkpoint.
 chkpt = {
-    "iter": it,
-    "latent dim": args.latent_dim,
-    "model size": args.model_size,
-    "phaseshuffle rad": args.phaseshuffle_rad,
-    "disrim filters": args.discrim_filters,
-    "z discrim depth": args.z_discrim_depth,
-    "joint discrim depth": args.joint_discrim_depth,
-    "G state_dict": model.G.state_dict(),
-    "E state_dict": model.E.state_dict(),
-    "D state_dict": model.D.state_dict(),
-    "EG optimiser": optimEG.state_dict(),
-    "D optimiser": optimD.state_dict(),
-    "EG losses": EG_losses,
-    "D losses": D_losses,
-    "val recon losses": recon_error_list
-}
+            "slice len": args.slice_len
+            "latent dim": args.latent_dim,
+            "model size": args.model_size,
+            "phaseshuffle rad": args.phaseshuffle_rad,
+            "disrim filters": args.discrim_filters,
+            "z discrim depth": args.z_discrim_depth,
+            "joint discrim depth": args.joint_discrim_depth,
+            "G state_dict": model.G.state_dict(),
+            "E state_dict": model.E.state_dict(),
+            "D state_dict": model.D.state_dict(),
+            "EG optimiser": optimEG.state_dict(),
+            "D optimiser": optimD.state_dict(),
+            "iter": it,
+            "EG losses": EG_losses,
+            "D losses": D_losses,
+            "val recon losses": recon_error_list
+        }
 torch.save(chkpt, os.path.join(logdir, f"final_it{it}.ckpt"))
