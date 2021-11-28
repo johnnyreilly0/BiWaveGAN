@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# TODO: add nch param to models
-# TODO: understand phaseshuffle
 # Taken from https://github.com/jtcramer/wavegan/blob/master/wavegan.py#L8
 class PhaseShuffle(nn.Module):
     """
