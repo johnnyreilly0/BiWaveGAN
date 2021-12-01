@@ -23,7 +23,7 @@ def get_args():
     parser.add_argument('--sample_rate', default=250000, type=int)
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--val_size', default=1000, type=int)
-    parser.add_argument('recon_loss_weight', default=0, type=float)
+    parser.add_argument('--recon_loss_weight', default=0, type=float)
     return parser.parse_args()
 
 

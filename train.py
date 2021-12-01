@@ -19,7 +19,7 @@ args = utils.train_utils.get_args()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # logging and plotting params
-ITERS_PER_VALIDATE = 500
+ITERS_PER_VALIDATE = 100
 ITERS_PER_CHECKPOINT = 10000
 N_FFT = 512
 HOP_LENGTH = 64
@@ -141,7 +141,7 @@ for it in range(args.n_iters):
         global_step=it
     )
     writer.add_scalar("loss/EG", loss_EG, global_step=it)
-    writer.add_scalar("loss/reconstruction", loss_EG, global_step=it)
+    writer.add_scalar("loss/reconstruction", loss_recon, global_step=it)
     writer.add_scalar("loss/D", loss_D, global_step=it)
 
     if args.val_size and it % ITERS_PER_VALIDATE == 0:
