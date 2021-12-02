@@ -1,4 +1,6 @@
 import torch
+import model
+import torch.optim as optim
 import argparse
 
 
@@ -62,3 +64,29 @@ def save_run_data(EG_losses, D_losses, recon_error_list, path):
         "val recon errors": recon_error_list
     }
     torch.save(run_data, path)
+
+
+def load_model(ckpt, device):
+    bwg = model.BiWaveGAN(
+        slice_len=32768,
+        latent_dim=ckpt['latent dim'],
+        model_size=ckpt['model size'],
+        discrim_filters=ckpt['disrim filters'],
+        z_discrim_depth=ckpt['z discrim depth'],
+        joint_discrim_depth=ckpt['joint discrim depth'],
+        phaseshuffle_rad=ckpt['phaseshuffle rad'],
+        device=device)
+    bwg.G.load_state_dict(ckpt['G state_dict'])  # , strict=strict)
+    bwg.E.load_state_dict(ckpt['E state_dict'])
+    bwg.D.load_state_dict(ckpt['D state_dict'])
+    bwg.eval()
+
+    return bwg
+
+def load_optimisers(model, ckpt):
+    optimEG = optim.Adam(list(model.G.parameters()) + list(model.E.parameters()), lr=ckpt['learning rate'],
+    betas = (0.5, 0.9))
+    optimD = optim.Adam(model.D.parameters(), lr=ckpt['learning rate'], betas=(0.5, 0.9))
+    optimEG.load_state_dict(ckpt['EG optimiser'])
+    optimD.load_state_dict(ckpt['D optimiser'])
+    return optimEG, optimD
