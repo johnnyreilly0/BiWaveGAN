@@ -83,10 +83,10 @@ def load_model(ckpt, device):
 
     return bwg
 
-def load_optimisers(model, ckpt):
-    optimEG = optim.Adam(list(model.G.parameters()) + list(model.E.parameters()), lr=ckpt['learning rate'],
+def load_optimisers(bwg, ckpt):
+    optimEG = optim.Adam(list(bwg.G.parameters()) + list(bwg.E.parameters()), lr=ckpt['learning rate'],
     betas = (0.5, 0.9))
-    optimD = optim.Adam(model.D.parameters(), lr=ckpt['learning rate'], betas=(0.5, 0.9))
+    optimD = optim.Adam(bwg.D.parameters(), lr=ckpt['learning rate'], betas=(0.5, 0.9))
     optimEG.load_state_dict(ckpt['EG optimiser'])
     optimD.load_state_dict(ckpt['D optimiser'])
     return optimEG, optimD

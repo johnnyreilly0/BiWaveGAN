@@ -1,11 +1,9 @@
 import os
 import torch
 import torch.nn.functional as F
-import torch.optim as optim
 import torchaudio
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from model import BiWaveGAN
 import utils.data_utils
 import utils.train_utils
 import datetime
@@ -49,7 +47,7 @@ train_iter = iter(train_loader)
 
 ckpt_path = "NAS/logs/20211123-220127/it75000.ckpt"
 ckpt = torch.load(ckpt_path, map_location=torch.device(device))
-model = utils.train_utils.load_model(ckpt_path)
+model = utils.train_utils.load_model(ckpt)
 optimEG, optimD = utils.train_utils.load_optimisers(ckpt, device)
 
 # for plotting and logging
